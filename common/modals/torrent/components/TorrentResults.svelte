@@ -15,7 +15,7 @@
   import { anilistClient } from '@/modules/anilist.js'
   import { click } from '@/modules/click.js'
   import { toast } from 'svelte-sonner'
-  import { X, Search, EllipsisVertical, Timer, Clapperboard, MonitorCog, ArrowDownWideNarrow, ChevronLeft, ChevronUp, ChevronDown, RefreshCw } from 'lucide-svelte'
+  import { X, Search, EllipsisVertical, Timer, Clapperboard, MonitorCog, ArrowDownWideNarrow, ChevronLeft, ChevronUp, ChevronDown, Radio, RefreshCw } from 'lucide-svelte'
   import Debug from 'debug'
   const debug = Debug('ui:torrents')
 
@@ -490,7 +490,10 @@
     </div>
     <div class='col-12 col-sm-6 d-flex align-items-center mt-5 justify-content-center mt-sm-0 justify-content-sm-end'>
       <div class='d-flex align-items-center mr-5' data-toggle='tooltip' data-placement='top' data-title='Scrape Peer Data'>
-        <button type='button' class='btn btn-square bg-dark-very-light ml-auto d-flex align-items-center justify-content-center rounded-2 flex-shrink-0' use:click={handleScrape} disabled={!$results?.resolved || !$results?.torrents?.length || scraping}><RefreshCw size='1.8rem' class={scraping ? 'spinning' : ''} /></button>
+        <button type='button' class='btn btn-square bg-dark-very-light ml-auto d-flex align-items-center justify-content-center rounded-2 flex-shrink-0' use:click={handleScrape} disabled={!$results?.resolved || !$results?.torrents?.length || scraping}><Radio size='1.8rem' class={scraping ? 'pulsing' : ''} /></button>
+      </div>
+      <div class='d-flex align-items-center mr-5' data-toggle='tooltip' data-placement='top' data-title='Refresh Search Results'>
+        <button type='button' class='btn btn-square bg-dark-very-light ml-auto d-flex align-items-center justify-content-center rounded-2 flex-shrink-0' use:click={() => queries = queryExtensions({...search}, resolution)} disabled={!$results?.resolved}><RefreshCw size='1.8rem' class={!$results?.resolved ? 'spinning' : ''} /></button>
       </div>
       <div class='d-flex align-items-center pr-5' title='Sorting Preference'>
         <ArrowDownWideNarrow size='2.75rem' class='position-absolute z-10 text-dark-light pl-10 pointer-events-none' />
@@ -615,6 +618,13 @@
   .px-25 {
     padding-left: 2.5rem;
     padding-right: 2rem;
+  }
+  :global(.pulsing) {
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
   }
   :global(.spinning) {
     animation: spin 1s linear infinite;
