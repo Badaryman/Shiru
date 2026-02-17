@@ -625,6 +625,9 @@ body {
   color: var(--octonary-color) !important;
 }
 
+.text-warning-dim {
+  color: var(--warning-color-dim) !important;
+}
 .text-warning-very-dim {
   color: var(--warning-color-very-dim) !important;
 }

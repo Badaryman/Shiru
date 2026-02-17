@@ -6,7 +6,7 @@
   import { getEpisodeMetadataForMedia, getKitsuMappings } from '@/modules/anime/anime.js'
   import { copyToClipboard } from '@/modules/clipboard.js'
   import { malDubs } from '@/modules/anime/animedubs.js'
-  import { Database, BadgeCheck, HardDrive, FileQuestion } from 'lucide-svelte'
+  import { Database, BadgeCheck, HardDrive, FileQuestion, AlertCircle, TriangleAlert } from 'lucide-svelte'
 
   const { reactive, init } = createListener(['torrent-button', 'torrent-safe-area'])
   init(true)
@@ -234,6 +234,8 @@
   export let type = 'default'
   export let countdown = -1
 
+  $: errorType = type === 'error' ? (result.title?.match(/no results/i) || result.title?.match(/extension is not enabled/i) ? 'warning' : 'error') : ''
+
   let card
   $: updateGlowColor(countdown)
   function updateGlowColor(value) {
@@ -250,13 +252,14 @@
   }
 </script>
 
-<div class='card bg-dark p-15 d-flex mx-0 pointer mb-10 mt-0 position-relative scale rounded-3' class:not-reactive={!$reactive} class:glow={countdown > -1} role='button' tabindex='0' use:click={() => play(result)} on:contextmenu|preventDefault={() => copyToClipboard(result.link, 'magnet URL')} title={result.parseObject.file_name}>
+<div class='card bg-dark p-15 d-flex mx-0 mb-10 mt-0 position-relative rounded-3' class:pointer={type !== 'error'} class:scale={type !== 'error'} class:not-reactive={!$reactive || type === 'error'} class:glow={countdown > -1} class:error-card={type === 'error'} role='button' tabindex='0' use:click={() => type !== 'error' && play(result)} on:contextmenu|preventDefault={() => type !== 'error' && copyToClipboard(result.link, 'magnet URL')} title={type === 'error' ? `${result.source?.name || 'Unknown Source'}: ${result.title}` : result.parseObject?.file_name}>
   <div class='position-absolute top-0 left-0 w-full h-full'>
+    <div class='position-absolute w-full h-full overflow-hidden rounded-3 error-overlay z-5 pointer-events-none' class:d-none={type !== 'error'}/>
     <div class='position-absolute w-full h-full overflow-hidden rounded-3' class:image-border={type === 'default'} >
       <SmartImage class='img-cover w-full h-full' images={[
         () => getEpisodeMetadataForMedia(media).then(metadata => metadata?.[episode]?.image),
-        media.bannerImage,
-        ...(media.trailer?.id ? [
+          media.bannerImage,
+          ...(media.trailer?.id ? [
           `https://i.ytimg.com/vi/${media.trailer.id}/maxresdefault.jpg`,
           `https://i.ytimg.com/vi/${media.trailer.id}/hqdefault.jpg`] : []),
         () => getKitsuMappings(media.id).then(metadata =>
@@ -268,72 +271,86 @@
     </div>
     <div class='position-absolute rounded-3 opacity-transition-hack' style='background: var(--torrent-card-gradient);' />
   </div>
-  <button type='button' tabindex='-1' class='position-absolute torrent-safe-area top-0 right-0 h-full w-50 bg-transparent border-0 shadow-none not-reactive z-1' use:click={() => {}}/>
+  <button type='button' tabindex='-1' class='position-absolute torrent-safe-area top-0 right-0 h-full w-50 bg-transparent border-0 shadow-none not-reactive z-1' class:d-none={type === 'error'} use:click={() => {}}/>
   <div class='d-flex pl-10 flex-column justify-content-between w-full h-auto position-relative' style='min-height: 10rem; min-width: 0;'>
     <div class='d-flex w-full'>
-      {#if result.accuracy === 'high'}
+      {#if type === 'error'}
+        <div class='d-flex align-items-center justify-content-center mr-10' class:text-warning-dim={errorType === 'warning'} class:text-danger-dim={errorType === 'error'} title='Extension Error'>
+          <svelte:component this={errorType === 'warning' ? AlertCircle : TriangleAlert} size='2.5rem' />
+        </div>
+      {:else if result.accuracy === 'high'}
         <div class='d-flex align-items-center justify-content-center mr-10 text-success-light' title='High Accuracy'>
           <BadgeCheck size='2.5rem' />
         </div>
       {/if}
-      <div class='font-size-22 font-weight-bold text-nowrap d-flex align-items-center'>
-        {result.parseObject?.release_group && result.parseObject.release_group.length < 20 ? result.parseObject.release_group : 'No Group'}
+      <div class='font-size-22 font-weight-bold text-nowrap d-flex align-items-center' class:text-warning-dim={errorType === 'warning'} class:text-danger-dim={errorType === 'error'}>
+        {#if type === 'error'}
+          {result.source?.name || 'Unknown Source'}
+        {:else}
+          {result.parseObject?.release_group && result.parseObject.release_group.length < 20 ? result.parseObject.release_group : 'No Group'}
+        {/if}
         {#if countdown > -1}
           <div class='ml-10'>[{countdown}]</div>
         {/if}
       </div>
-      {#if result.type === 'batch'}
+      {#if type !== 'error' && result.type === 'batch'}
         <div class='d-flex ml-auto mr-10' title='Batch'><Database size='2.5rem'/></div>
       {/if}
-      <div class='d-flex' class:ml-auto={result.type !== 'batch'} >
-        {#if result.source.icon}
+      <div class='d-flex' class:ml-auto={type === 'error' || result.type !== 'batch'} >
+        {#if result.source?.icon}
           <img class='wh-25' src={(!result.source.icon.startsWith('http') ? 'data:image/png;base64,' : '') + result.source.icon} alt={result.source.name} title={result.source.name}>
-        {:else if result.source.managed}
+        {:else if result.source?.managed}
           <HardDrive size='2.5rem'/>
         {:else}
           <FileQuestion size='2.5rem' />
         {/if}
       </div>
     </div>
-    <div class='py-5 font-size-14 text-muted d-flex align-items-center'>
-      {#await simplifyFilename({ media, episode }, result.parseObject) then fileName}
-        <span class='overflow-hidden text-truncate'>{fileName}</span>
-      {/await}
-      <span class='ml-auto mr-5 w-30 h-10 flex-shrink-0'/>
-      <TorrentButton class='position-absolute btn btn-square shadow-none bg-transparent bd-highlight h-40 w-40 right-0 mr--8 z-1' hash={result.hash} torrentID={result.link} search={{ media, episode: (media?.format !== 'MOVIE' && result.type !== 'batch') && episode }} size={'2.5rem'} strokeWidth={'2.3'}/>
-    </div>
-    <div class='metadata-container d-flex w-full align-items-start text-dark font-size-14' style='line-height: 1;'>
-      <div class='primary-metadata py-5 d-flex flex-row'>
-        <div class='text-light d-flex align-items-center text-nowrap'>{fastPrettyBytes(result.size)}</div>
-        <div class='text-light d-flex align-items-center text-nowrap'>&nbsp;•&nbsp;</div>
-        {#if !result.source.managed || !result.source.name.match(/completed/i)}
-          <div class='text-light d-flex align-items-center text-nowrap'>{result.seeders} Seeders</div>
-          <div class='text-light d-flex align-items-center text-nowrap'>&nbsp;•&nbsp;</div>
-        {/if}
-        <div class='text-light d-flex align-items-center text-nowrap'>{since(new Date(result.date))}</div>
-      </div>
-      <div class='secondary-metadata d-flex flex-wrap ml-auto justify-content-end'>
-        {#if result.type === 'best'}
-          <div class='rounded px-15 py-5 border text-nowrap font-weight-bold d-flex align-items-center' style='background: var(--success-color-very-dim); border-color: var(--success-color-light) !important; color: var(--success-color-light); margin-top: 0.15rem'>
-            Best Release
-          </div>
-        {:else if result.type === 'alt'}
-          <div class='rounded px-15 py-5 border text-nowrap font-weight-bold d-flex align-items-center' style='background: var(--danger-color-very-dim); border-color: var(--danger-color) !important; color: var(--danger-color); margin-top: 0.15rem'>
-            Alt Release
-          </div>
-        {/if}
-        {#await sanitiseTerms({ media, episode }, result.parseObject) then termObjects}
-          {@const terms = termObjects?.map(term => term.term).filter((term, index, self) => index === self.findLastIndex(t => t.text === term.text))}
-          {#each terms as term, index}
-            <div class='rounded px-15 py-5 bg-very-dark text-nowrap text-white d-flex align-items-center' class:ml-10={index !== 0 || result.type === 'best' || result.type === 'alt'} style='margin-top: 0.15rem;'>
-              {term.text}
-            </div>
-          {/each}
+    <div class='py-5 font-size-14 d-flex align-items-center' class:text-warning-dim={errorType === 'warning'} class:text-danger-dim={errorType === 'error'} class:text-muted={type !== 'error'}>
+      {#if type === 'error'}
+        <span class='overflow-hidden text-truncate'>{result.title}</span>
+      {:else}
+        {#await simplifyFilename({ media, episode }, result.parseObject) then fileName}
+          <span class='overflow-hidden text-truncate'>{fileName}</span>
         {/await}
-      </div>
+        <span class='ml-auto mr-5 w-30 h-10 flex-shrink-0'/>
+        <TorrentButton class='position-absolute btn btn-square shadow-none bg-transparent bd-highlight h-40 w-40 right-0 mr--8 z-1' hash={result.hash} torrentID={result.link} search={{ media, episode: (media?.format !== 'MOVIE' && result.type !== 'batch') && episode }} size={'2.5rem'} strokeWidth={'2.3'}/>
+      {/if}
     </div>
+    {#if type !== 'error'}
+      <div class='metadata-container d-flex w-full align-items-start text-dark font-size-14' style='line-height: 1;'>
+        <div class='primary-metadata py-5 d-flex flex-row'>
+          <div class='text-light d-flex align-items-center text-nowrap'>{fastPrettyBytes(result.size)}</div>
+          <div class='text-light d-flex align-items-center text-nowrap'>&nbsp;•&nbsp;</div>
+          {#if !result.source?.managed || !result.source?.name?.match(/completed/i)}
+            <div class='text-light d-flex align-items-center text-nowrap'>{result.seeders} Seeders</div>
+            <div class='text-light d-flex align-items-center text-nowrap'>&nbsp;•&nbsp;</div>
+          {/if}
+          <div class='text-light d-flex align-items-center text-nowrap'>{since(new Date(result.date))}</div>
+        </div>
+        <div class='secondary-metadata d-flex flex-wrap ml-auto justify-content-end'>
+          {#if result.type === 'best'}
+            <div class='rounded px-15 py-5 border text-nowrap font-weight-bold d-flex align-items-center' style='background: var(--success-color-very-dim); border-color: var(--success-color-light) !important; color: var(--success-color-light); margin-top: 0.15rem'>
+              Best Release
+            </div>
+          {:else if result.type === 'alt'}
+            <div class='rounded px-15 py-5 border text-nowrap font-weight-bold d-flex align-items-center' style='background: var(--danger-color-very-dim); border-color: var(--danger-color) !important; color: var(--danger-color); margin-top: 0.15rem'>
+              Alt Release
+            </div>
+          {/if}
+          {#await sanitiseTerms({ media, episode }, result.parseObject) then termObjects}
+            {@const terms = termObjects?.map(term => term.term).filter((term, index, self) => index === self.findLastIndex(_term => _term.text === term.text))}
+            {#each terms as term, index}
+              <div class='rounded px-15 py-5 bg-very-dark text-nowrap text-white d-flex align-items-center' class:ml-10={index !== 0 || result.type === 'best' || result.type === 'alt'} style='margin-top: 0.15rem;'>
+                {term.text}
+              </div>
+            {/each}
+          {/await}
+        </div>
+      </div>
+    {/if}
   </div>
-  <div bind:this={card} class='position-absolute rounded-3 bd-highlight opacity-transition-hack' class:border-best={type === 'best'} class:border-magnet={type === 'magnet'} />
+  <div bind:this={card} class='position-absolute rounded-3 bd-highlight opacity-transition-hack' class:border-best={type === 'best'} class:border-magnet={type === 'magnet'} class:border-warning-dim={errorType === 'warning'} class:border-danger-dim={errorType === 'error'} />
 </div>
 
 <style>
@@ -351,6 +368,13 @@
   }
   .image-border {
     border-radius: 1.1rem;
+  }
+  .error-overlay {
+    background: repeating-linear-gradient(-45deg, hsla(var(--black-color-hsl), 0.2), hsla(var(--black-color-hsl), 0.4) .5rem, transparent .5rem, transparent 1.25rem) !important;
+  }
+  .error-card {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
   .glow {
