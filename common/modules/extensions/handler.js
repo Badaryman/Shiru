@@ -35,17 +35,26 @@ export async function getResultsFromExtensions({ media, episode, batch, movie, r
   await extensionManager.whenReady.promise
   debug(`Fetching sources for ${media?.id}:${media?.title?.userPreferred} ${episode} ${batch} ${movie} ${resolution}`)
   const aniDBMeta = await ALToAniDB(media)
-  const anidbAid = aniDBMeta?.mappings?.anidb_id
-  const anidbEid = anidbAid && (await ALtoAniDBEpisode({ media, episode }, aniDBMeta))?.anidbEid
+  const { anidb_id: anidbAid, imdb_id: imdbAid, thetvdb_id: tvdbAid, themoviedb_id: mvdbAid } = aniDBMeta?.mappings || {}
+  const mappingsE = ((anidbAid || tvdbAid) && (await ALtoAniDBEpisode({ media, episode }, aniDBMeta))) || {}
+  const anidbEid = anidbAid && mappingsE?.anidbEid
+  const tvdbEid = tvdbAid && mappingsE?.tvdbId
   debug(`AniDB Mapping: ${anidbAid} ${anidbEid}`)
 
   /** @type {Options} */
   const options = {
     anilistId: media.id,
     episodeCount: getMediaMaxEp(media),
+    media,
+    mappingsA: aniDBMeta?.mappings || {},
+    mappingsE,
     episode,
     anidbAid,
     anidbEid,
+    tvdbAid,
+    tvdbEid,
+    imdbAid,
+    mvdbAid,
     titles: createTitles(media),
     resolution,
     exclusions: settings.value.enableExternal ? [] : exclusions
@@ -255,12 +264,10 @@ export function episodeByAirDate (alDate, episodes, episode) {
 /** @param {import('@/modules/al.js').Media} media */
 function createTitles (media) {
   // group and de-duplicate
-  const grouped = [...new Set(Object.values(media.title).concat(media.synonyms).filter(name => name != null && name.length > 3))]
+  const groupedTitles = [...new Set(Object.values(media.title).concat(media.synonyms).filter(name => name != null && name.length > 3))]
   const titles = []
   /** @param {string} title */
   const appendTitle = title => {
-    // replace & with encoded
-    // title = title.replace(/&/g, '%26').replace(/\?/g, '%3F').replace(/#/g, '%23')
     titles.push(title)
 
     // replace Season 2 with S2, else replace 2nd Season with S2, but keep the original title
@@ -273,10 +280,9 @@ function createTitles (media) {
       titles.push(title.replace(/(\d)(?:nd|rd|th) Season/i, `S${match1[1]}`))
     }
   }
-  for (const t of grouped) {
-    if (t.includes('-')) appendTitle(t.replaceAll('-', ' '))
-    if (t.includes("'")) appendTitle(t.replaceAll("'", ''))
-    appendTitle(t.replaceAll('-', '').replaceAll('"', ''))
+  for (const title of groupedTitles) {
+    const titleVariants = new Set([title, title.replaceAll('-', ' '), title.replaceAll("'", ''), title.replaceAll('"', ''), title.replaceAll('-', ' ').replaceAll("'", '').replaceAll('"', '')])
+    for (const titleVariant of titleVariants) appendTitle(titleVariant)
   }
   return titles
 }

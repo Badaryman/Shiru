@@ -39,6 +39,7 @@ class Worker {
         const blobUrl = URL.createObjectURL(blob)
         source = (await import(/* webpackIgnore: true */ blobUrl)).default
       }
+      source.anitomyscript = (await import('anitomyscript')).default
       this.id = id
       this.source = source
 
