@@ -343,7 +343,7 @@
   export let episode
 
   /** @type {Function} */
-  export let play
+  export let play = () => {}
 
   export let type = 'default'
   export let countdown = -1
