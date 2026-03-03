@@ -66,6 +66,7 @@
   $: position = cache.getEntry(caches.GENERAL, 'posMiniplayer') || 'bottom right'
   $: if (!dragging) cache.setEntry(caches.GENERAL, 'posMiniplayer', position)
   $: minWidthRatio = $isSuperSmall ? 0.25 : 0.15
+  $: playerPage = $page === page.PLAYER && (!$modal || !modal.length || !modal.exists(modal.ANIME_DETAILS))
   $: shelveTabLeft = shelved ? shelveLeft : !!(position + draggingPos).match(/left/i)
   $: {
     if (active) idleShelve(playbackPaused, $settings.autoHideMiniplayer)
@@ -401,7 +402,7 @@
   class:shelved-left={shelved && shelveLeft}
   class:shelved-right={shelved && !shelveLeft}
   class:miniplayer-border={!shelved}
-  class:player-page={$page === page.PLAYER}
+  class:player-page={playerPage}
   class:bouncing
   style:--left={left}
   style:--top={top}
