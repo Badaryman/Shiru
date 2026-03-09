@@ -339,6 +339,9 @@
 .status-transition {
   transition: height .3s ease 2s, padding .3s ease 2s;
 }
+.opacity-ts-3 {
+  transition: opacity .3s ease-in-out;
+}
 
 .scrollbar-none {
   scrollbar-width: none;
@@ -698,6 +701,12 @@ body {
   background-color: var(--duodenary-color) !important;
 }
 
+.bg-blur {
+  background: hsla(var(--black-color-hsl), .45);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+}
+
 .anime-details {
     opacity: 0.5;
     z-index: 0;
@@ -711,7 +720,10 @@ body {
 }
 
 .opacity-55 {
-  opacity: 0.55;
+  opacity: .55;
+}
+.opacity-90 {
+  opacity: .9;
 }
 
 .inset-0 {
@@ -925,6 +937,9 @@ img[src=''], img[src=' '] {
   padding-left: 4rem;
 }
 
+.py-6px {
+  padding: 0 6px;
+}
 .py-30 {
   padding-top: 3rem;
   padding-bottom: 3rem;

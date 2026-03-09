@@ -267,6 +267,8 @@
       completed = false
       subDelay = 0
       subDelayText = ''
+      wheelAccumulator = 0
+      boostScrollCount = 0
       if (subs) {
         subs.destroy()
         subs = null
@@ -354,6 +356,13 @@
   $: updateDelay(subDelay)
   function updateDelay (delay) {
     if (subs?.renderer) subs.renderer.timeOffset = Number(delay)
+  }
+  function setSubDelay(delay) {
+    subDelay = delay
+    subDelayText = subDelay > 0 ? `+${subDelay}s` : `${subDelay}s`;
+    subDelayVisible = true;
+    clearTimeout(subDelayTimeout);
+    subDelayTimeout = setTimeout(() => subDelayVisible = false, 600)
   }
 
   let currentTime = 0
@@ -916,14 +925,14 @@
       desc: 'Reset Playback Rate'
     },
     Comma: {
-      fn: (e) => { if (!viewAnime && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') { subDelay = Number((Number(subDelay) + (e.shiftKey ? -1.0 : -0.1)).toFixed(1)); subDelayText = subDelay > 0 ? `+${subDelay}s` : `${subDelay}s`; subDelayVisible = true; clearTimeout(subDelayTimeout); subDelayTimeout = setTimeout(() => subDelayVisible = false, 600) } },
+      fn: (e) => !viewAnime && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA' && setSubDelay(Number((Number(subDelay) + (e.shiftKey ? -1.0 : -0.1)).toFixed(1))),
       id: 'sub_delay_decrease',
       icon: ClockArrowDown,
       type: 'icon',
       desc: 'Subtitle Delay -0.1s / -1.0s'
     },
     Period: {
-      fn: (e) => { if (!viewAnime && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') { subDelay = Number((Number(subDelay) + (e.shiftKey ? 1.0 : 0.1)).toFixed(1)); subDelayText = subDelay > 0 ? `+${subDelay}s` : `${subDelay}s`; subDelayVisible = true; clearTimeout(subDelayTimeout); subDelayTimeout = setTimeout(() => subDelayVisible = false, 600) } },
+      fn: (e) => !viewAnime && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA' && setSubDelay(Number((Number(subDelay) + (e.shiftKey ? 1.0 : 0.1)).toFixed(1))),
       id: 'sub_delay_increase',
       icon: ClockArrowUp,
       type: 'icon',
@@ -1768,8 +1777,10 @@
         </button>
       {/if}
     {/if}
-    <span class='position-absolute top-auto bottom-30 left-0 w-full text-center mb-20 z-30 font-weight-bold font-scale-40' style='text-shadow: 0 2px 4px rgba(0,0,0,0.8); opacity: {volumeVisible ? 0.9 : 0}; transition: opacity 0.3s ease-in-out, color 0.7s ease-in-out; color: {volumeText === 'Muted' ? 'var(--paused-color)' : 'white'}'>{volumeText}</span>
-    {#if subDelayText}<span class='position-absolute top-auto bottom-30 left-0 w-full text-center mb-20 z-30 font-weight-bold font-scale-40 text-white' style='text-shadow: 0 2px 4px rgba(0,0,0,0.8); opacity: {subDelayVisible ? 0.9 : 0}; transition: opacity 0.3s ease-in-out'>{subDelayText}</span>{/if}
+    <span class='ui-volume position-absolute z-10 font-weight-bold font-scale-40 text-white rounded-10 pointer-events-none bg-blur py-6px opacity-90 opacity-ts-3' class:transparent={!volumeVisible} class:muted={volume === 0}>{volumeText}</span>
+    {#if subDelayText}
+      <span class='position-absolute z-10 font-weight-bold font-scale-40 text-white rounded-10 pointer-events-none bg-blur py-6px opacity-90 opacity-ts-3' class:transparent={!subDelayVisible}>{subDelayText}</span>
+    {/if}
   </div>
   <div class='bottom d-flex z-40 flex-column px-20'>
     <div class='w-full d-flex align-items-center h-20 mb-5 seekbar' tabindex='-1' role='button' on:keydown={handleSeekbarKey}>
@@ -2282,6 +2293,11 @@
   }
   .rounded-10 {
     border-radius: 1rem;
+  }
+
+  .ui-volume.muted {
+    color: var(--paused-color) !important;
+    transition: opacity .3s ease-in-out, color .7s ease-in-out !important;
   }
 
   .btn-shadow {

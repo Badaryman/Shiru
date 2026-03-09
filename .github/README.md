@@ -5,8 +5,6 @@
 </p>
 <h4 align="center"><b>A personal anime library manager for watching and tracking your collection in real time. Lightweight, powerful, and paws-itively fast. No waiting required!</b></h4>
 
-https://github.com/user-attachments/assets/3ff100f0-e008-4ff5-88f5-ad4290863f96
-
 <p align="center">
   <a href="https://github.com/RockinChaos/Shiru/wiki/">📚 Wiki</a> •
   <a href="https://github.com/RockinChaos/Shiru/wiki/features/">✨ Features</a> •
@@ -21,6 +19,8 @@ https://github.com/user-attachments/assets/3ff100f0-e008-4ff5-88f5-ad4290863f96
   <a href="https://github.com/RockinChaos/Shiru/stargazers"><img alt="Stargazers" src="https://img.shields.io/github/stars/RockinChaos/Shiru?style=flat-square"></a>
   <a href="../LICENSE"><img alt="License: GPLv3" src="https://img.shields.io/github/license/RockinChaos/Shiru?style=flat-square"></a>
 </p>
+
+https://github.com/user-attachments/assets/3ff100f0-e008-4ff5-88f5-ad4290863f96
 
 ## 📃 **About**
 
@@ -117,7 +117,7 @@ All keybinds are fully customizable via drag-and-drop in the keybinds UI (`` ` `
 | `S` | Skip opening (seek forward 90s)    |
 | `R` | Seek backwards 90s                 |
 | `→` / `←` | Seek forward / backward 2 seconds  |
-| `↑` / `↓` | Increase / decrease volume         |
+| `↑` / `↓` / `Scroll` | Increase / decrease volume         |
 | `M` | Mute                               |
 | `C` | Cycle subtitle tracks              |
 | `F` | Toggle fullscreen                  |
@@ -129,6 +129,8 @@ All keybinds are fully customizable via drag-and-drop in the keybinds UI (`` ` `
 | `\` | Reset playback speed               |
 | `I` | Show video stats                   |
 | `H` | Open file manager                  |
+| `,` / `Shift+,` | Subtitle delay -0.1s / -1.0s       |
+| `.` / `Shift+.` | Subtitle delay +0.1s / +1.0s       |
 | `` ` `` | Open keybinds editor               |
 
 ## ⚙️ **Installation**
