@@ -89,6 +89,7 @@
   let volumeTimeout
   let wheelAccumulator = 0
   let boostScrollCount = 0
+  let boostResetTimer = null
   let audioCtx = null
   let source = null
   let gainNode = null
@@ -131,6 +132,8 @@
     } else {
       if (gainNode?.gain) gainNode.gain.value = volume
       gain = 0
+      boostScrollCount = 0
+      clearTimeout(boostResetTimer)
     }
     if ('audioTracks' in HTMLVideoElement.prototype) {
       if (!video.audioTracks.length) {
@@ -277,8 +280,6 @@
       completed = false
       subDelay = 0
       subDelayText = ''
-      wheelAccumulator = 0
-      boostScrollCount = 0
       if (subs) {
         subs.destroy()
         subs = null
@@ -545,7 +546,11 @@
       volume = gain <= 1 ? gain : 1
       gain = 1
       if (audioCtx) gainNode.gain.value = 1
-    } else setGain({ target: { value: volume } })
+    } else {
+      setGain({ target: { value: volume } })
+      boostScrollCount = 0
+      clearTimeout(boostResetTimer)
+    }
     volumeBoosted = !volumeBoosted
     cache.setEntry(caches.HISTORY, 'lastBoosted', { ...(cache.getEntry(caches.HISTORY, 'lastBoosted') || {}), [media?.media?.id || media?.title || media?.parseObject?.title || media?.parseObject?.file_name]: { boosted: volumeBoosted, gain } })
     return true
@@ -553,11 +558,11 @@
   function toggleMute () {
     muted = !muted
   }
-  function handleWheel(e) {
+  function handleWheel(event) {
     if (viewAnime) return
-    e.preventDefault()
+    event.preventDefault()
     // make trackpad type device scroll more gradual
-    wheelAccumulator += e.deltaY
+    wheelAccumulator += event.deltaY
     if (Math.abs(wheelAccumulator) < 100) return
 
     const direction = wheelAccumulator < 0 ? 'up' : 'down'
@@ -566,16 +571,25 @@
 
     const combined = (volumeBoosted && gain > 1) ? gain : volume
     let next = Math.max(0, Math.min(3, combined + delta))
-    // limit guard
-    if (next >= 1.5 && direction === 'up' && boostScrollCount < 5) {
+    // If crossing 100% on the way up, snap to exactly 100% and stop
+    if (direction === 'up' && combined < 1 && next > 1) next = 1
+    // limit guard at 100%
+    if (!volumeBoosted && combined >= 1 && next > 1 && direction === 'up' && boostScrollCount < 5) {
       boostScrollCount++
-      const superscripts = ['⁵','⁴','³','²','¹','⁰']
-      volumeText = `${(next * 100).toFixed(0)}%${superscripts[boostScrollCount - 1]}`
+      const superscripts = ['⁵','⁴','³','²','¹']
+      volumeText = `${(combined * 100).toFixed(0)}%${superscripts[boostScrollCount - 1]}`
       showVolumeTemporarily(false)
+      // Reset boostScrollCount after 2s of inactivity
+      clearTimeout(boostResetTimer)
+      boostResetTimer = setTimeout(() => { boostScrollCount = 0 }, 2_000)
+      boostResetTimer.unref?.()
       return
     }
     // Reset guard if we go back down
-    if (next <= 1.5) boostScrollCount = 0
+    if (next <= 1) {
+      boostScrollCount = 0
+      clearTimeout(boostResetTimer)
+    }
     // --- STATE APPLICATION ---
     if (next <= 1) {
       volume = next
@@ -597,6 +611,7 @@
     volumeVisible = true
     clearTimeout(volumeTimeout)
     volumeTimeout = setTimeout(() => volumeVisible = false, 600)
+    volumeTimeout.unref?.()
   }
   function toggleFullscreen () {
     if (!externalPlayback) document.fullscreenElement ? document.exitFullscreen() : document.querySelector('.content-wrapper').requestFullscreen()
@@ -1795,7 +1810,7 @@
         </button>
       {/if}
     {/if}
-    <span class='ui-volume position-absolute z-10 font-weight-bold font-scale-40 text-white rounded-10 pointer-events-none bg-blur py-6px opacity-90 opacity-ts-3' class:transparent={!volumeVisible} class:muted={volume === 0}>{volumeText}</span>
+    <span class='ui-volume position-absolute z-10 font-weight-bold font-scale-40 rounded-10 pointer-events-none bg-blur py-6px opacity-90 opacity-ts-3' class:transparent={!volumeVisible} class:text-white={volumeBoosted || !boostScrollCount} class:boosting={!volumeBoosted && boostScrollCount} class:muted={volume === 0}>{volumeText}</span>
     {#if subDelayText}
       <span class='position-absolute z-10 font-weight-bold font-scale-40 text-white rounded-10 pointer-events-none bg-blur py-6px opacity-90 opacity-ts-3' class:transparent={!subDelayVisible}>{subDelayText}</span>
     {/if}
@@ -2313,9 +2328,18 @@
     border-radius: 1rem;
   }
 
+  @keyframes boostPulse {
+    0%, 100% { color: var(--white-color); }
+    50% { color: var(--octonary-color); }
+  }
+  .ui-volume.muted, .ui-volume.boosting {
+    transition: opacity .3s ease-in-out, color .7s ease-in-out !important;
+  }
+  .ui-volume.boosting {
+    animation: boostPulse 1.5s ease-in-out infinite !important;
+  }
   .ui-volume.muted {
     color: var(--paused-color) !important;
-    transition: opacity .3s ease-in-out, color .7s ease-in-out !important;
   }
 
   .btn-shadow {
